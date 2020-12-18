@@ -10,5 +10,5 @@ server: server.cpp server.h
 client: client.cpp client.h
 	$(CC) $(OPTION) -o client client.cpp
 
-clean
+clean:
 	-rm -f *.o, server, client
