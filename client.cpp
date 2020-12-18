@@ -20,7 +20,7 @@ myClient::~myClient()
 void myClient::init()
 {
     cout << "[ debug] socket()...\n";
-    socketfd = socket(F_INET, SOCK_STREAM, 0);
+    socketfd = socket(AF_INET, SOCK_STREAM, 0);
     cout << "[ debug] socketfd = " << socketfd << endl;
     printMenu();
 }
@@ -32,7 +32,7 @@ void myClient::run()
     while(true)
     {
         string command;
-        vector<string> words;
+        // vector<string> words;
 
         cout << ">> ";
         
@@ -76,13 +76,13 @@ void myClient::run()
                 serverAddr.sin_addr.s_addr = inet_addr(words[1].c_str());
 
                 cout << "[ debug] connect()...\n";
-                if( connect(sockfd, (sockaddr*)&serverAddr, (socklen_t)sizeof(serverAddr)) < 0 )
+                if( connect(socketfd, (sockaddr*)&serverAddr, (socklen_t)sizeof(serverAddr)) < 0 )
                 {
                     cout << "Connect failed!\n";
                 }
                 cout << "[ debug] pthread_create()...\n";
                 // new thread: 新线程的内存单元，null指针，新线程开始的地方，传入参数给start_rtn
-                pthread_create(&tidp, nullptr, start_rtn, &sockfd);
+                pthread_create(&tidp, nullptr, start_rtn, &socketfd);
             }
             
             
