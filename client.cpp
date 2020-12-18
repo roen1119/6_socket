@@ -24,24 +24,19 @@ void myClient::run()
     while(true)
     {
         string command;
-        // vector<string> words;
-
-        cout << "# ";
-        
+        cout << "> ";
         getline(cin, command);
-        cout << "[ debug] your command is: " << command << endl;
-        /*
-         *  TODO:
-         *  把command划分成由空格断开的多个短字，并存放在words里
-         *  暂时使用参考代码里已实现好的
+        /**
+         * TODO:  
+         * my split 
          */
-
-        // split begins
             regex whitespace("\\s+");
             vector<string> words(sregex_token_iterator(command.begin(), command.end(), whitespace, -1),
                              sregex_token_iterator());
-        // split finished
-
+        /**
+         * TODO:
+         * remember to check the length of `words[]` to prevent segment error
+         */
         string op = words[0];
         if (op == "")
         {
@@ -49,7 +44,6 @@ void myClient::run()
         }
         else if (op =="connect")
         {
-            cout << "[ debug] you want to connect\n";
             if (-1 != socketfd)
             {
                 /* TODO
@@ -69,17 +63,18 @@ void myClient::run()
                 serverAddr.sin_port = htons(stoi(words[2]));
                 serverAddr.sin_addr.s_addr = inet_addr(words[1].c_str());
 
-                cout << "[ debug] connect()...\n";
                 if( connect(socketfd, (sockaddr*)&serverAddr, (socklen_t)sizeof(serverAddr)) < 0 )
                 {
                     cout << "Connect failed!\n";
+                    socketfd = -1;
                 }
-                cout << "[ debug] pthread_create()...\n";
-                // new thread: 新线程的内存单元，null指针，新线程开始的地方，传入参数给start_rtn
-                pthread_create(&tidp, nullptr, start_rtn, &socketfd);
+                else
+                {
+                    cout << "[ debug] pthread_create()...\n";
+                    // new thread: 新线程的内存单元，null指针，新线程开始的地方，传入参数给start_rtn
+                    pthread_create(&tidp, nullptr, start_rtn, &socketfd);
+                }
             }
-            
-            
         }
         else if (op == "gettime")
         {
@@ -103,7 +98,6 @@ void myClient::run()
         }
         else if (op == "close")
         {
-            cout << "[ debug] you want to close\n";
             if(-1 == socketfd)
             {
                 cout << "No connection.\n";
@@ -112,10 +106,9 @@ void myClient::run()
             {
                 cout << "[ debug] disconnect()...\n";
                 disconnect();
-                // TODO: 发送disconnected包
+                // TODO: 
                 //       关闭子线程
-                // 考虑把close放进一个函数里面。
-                // socketfd = -1;
+                socketfd = -1;
                 // cout << "Connection closed. \n";
             }
         }
@@ -132,9 +125,16 @@ void myClient::run()
         {
             printMenu();
         }
+        else if (op=="debug")
+        {
+            if(words[1] == "socketfd")
+            {
+                cout << "[ debug] socketfd: " <<  socketfd << endl;
+            }
+        }
         else
         {
-            cout << "Do not find operation: " << op << "\n";
+            cout << op << ": illegal operation\n";
         }
     }
 }
