@@ -9,12 +9,12 @@ int main()
 myClient::myClient()
 {
     cout << "[ debug] in myClient::myClinet\n";
-    socketfd = -1;
+    sockfd = -1;
 }
 
 myClient::~myClient()
 {
-
+    close(sockfd);
 }
 
 void myClient::run()
@@ -44,7 +44,7 @@ void myClient::run()
         }
         else if (op =="connect")
         {
-            if (-1 != socketfd)
+            if (-1 != sockfd)
             {
                 /* TODO
                  * 从serverAddr中获得
@@ -56,23 +56,23 @@ void myClient::run()
             }
             else
             {
-                // connect
-                socketfd = socket(AF_INET, SOCK_STREAM, 0);
-                cout << "[ debug] socketfd = " << socketfd << endl;
+                sockfd = socket(AF_INET, SOCK_STREAM, 0);
+                cout << "[ debug] sockfd = " << sockfd << endl;
                 serverAddr.sin_family = AF_INET;
                 serverAddr.sin_port = htons(stoi(words[2]));
                 serverAddr.sin_addr.s_addr = inet_addr(words[1].c_str());
 
-                if( connect(socketfd, (sockaddr*)&serverAddr, (socklen_t)sizeof(serverAddr)) < 0 )
+                if( connect(sockfd, (sockaddr*)&serverAddr, (socklen_t)sizeof(serverAddr)) < 0 )
                 {
                     cout << "Connect failed!\n";
-                    socketfd = -1;
+                    close(sockfd);
+                    sockfd = -1;
                 }
                 else
                 {
                     cout << "[ debug] pthread_create()...\n";
                     // new thread: 新线程的内存单元，null指针，新线程开始的地方，传入参数给start_rtn
-                    pthread_create(&tidp, nullptr, start_rtn, &socketfd);
+                    pthread_create(&tidp, nullptr, start_rtn, &sockfd);
                 }
             }
         }
@@ -98,7 +98,7 @@ void myClient::run()
         }
         else if (op == "close")
         {
-            if(-1 == socketfd)
+            if(-1 == sockfd)
             {
                 cout << "No connection.\n";
             }
@@ -108,13 +108,13 @@ void myClient::run()
                 disconnect();
                 // TODO: 
                 //       关闭子线程
-                socketfd = -1;
+                sockfd = -1;
                 // cout << "Connection closed. \n";
             }
         }
         else if (op == "exit")
         {
-            if(-1 != socketfd)
+            if(-1 != sockfd)
             {
                 disconnect();
             }
@@ -127,9 +127,9 @@ void myClient::run()
         }
         else if (op=="debug")
         {
-            if(words[1] == "socketfd")
+            if(words[1] == "sockfd")
             {
-                cout << "[ debug] socketfd: " <<  socketfd << endl;
+                cout << "[ debug] sockfd: " <<  sockfd << endl;
             }
         }
         else

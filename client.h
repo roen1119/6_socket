@@ -10,17 +10,17 @@
 
 #include <sys/socket.h> // socket基本接口
 #include <arpa/inet.h>  // htonl，htons，ntohl，ntohs等字节序转换函数
+#include <unistd.h>
 
 using namespace std;
 
-// TODO
 #define BUFFER_SIZE 256
-void connection_handle(int sfd);
+void connection_handle(int sfd); // TODO
 
 class myClient
 {
 private:
-    int socketfd;               // 客户端的socket描述字
+    int sockfd;               // 客户端的socket描述字
     sockaddr_in serverAddr;     // 所连接的服务器的socket地址
     // Note:
     //  sin_family:对应的是地址类型：AF_INET代表ipv4。
@@ -29,7 +29,7 @@ private:
     
     pthread_t tidp;             // 新创建的线程ID指向的内存单元
 
-    void init();    // 通过socket获得socketfd，打印菜单
+    void init();    // 通过socket获得sockfd，打印菜单
     void disconnect();  // 断开连接，发送
     void printMenu();
 
