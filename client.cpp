@@ -152,7 +152,7 @@ void connection_handle(int sfd)
     // TODO: keep receiving
 }
 
-void printMenu()
+void myClient::printMenu()
 {
     cout << "Please input a command:\n"
          << "- connect [IP] [port]\n"
@@ -163,4 +163,9 @@ void printMenu()
          << "- close\n"
          << "- exit\n"
          << "- help\n";
+}
+
+void myClient::disconnect()
+{
+    return;
 }
