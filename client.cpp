@@ -17,24 +17,16 @@ myClient::~myClient()
 
 }
 
-void myClient::init()
-{
-    cout << "[ debug] socket()...\n";
-    socketfd = socket(AF_INET, SOCK_STREAM, 0);
-    cout << "[ debug] socketfd = " << socketfd << endl;
-    printMenu();
-}
-
 void myClient::run()
 {
     cout << "[ debug] in void myClient::run()\n";
-    init();
+    printMenu();
     while(true)
     {
         string command;
         // vector<string> words;
 
-        cout << ">> ";
+        cout << "# ";
         
         getline(cin, command);
         cout << "[ debug] your command is: " << command << endl;
@@ -71,6 +63,8 @@ void myClient::run()
             else
             {
                 // connect
+                socketfd = socket(AF_INET, SOCK_STREAM, 0);
+                cout << "[ debug] socketfd = " << socketfd << endl;
                 serverAddr.sin_family = AF_INET;
                 serverAddr.sin_port = htons(stoi(words[2]));
                 serverAddr.sin_addr.s_addr = inet_addr(words[1].c_str());
