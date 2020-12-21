@@ -23,7 +23,7 @@ myClient::~myClient()
     {
         disconnect();
     }
-    // msgctl(msgid, IPC_RMID, 0);
+    msgctl(msgid, IPC_RMID, 0);
 }
 
 void myClient::run()
@@ -57,8 +57,7 @@ void myClient::run()
 
                 if( connect(sockfd, (sockaddr*)&serverAddr, (socklen_t)sizeof(serverAddr)) < 0 )
                 {
-                    cout << "Connect failed!\n";
-                    cout << "[ debug] sockfd = " << sockfd << endl;
+                    cout << "Connect failed! Try reopening the server and client.\n";
                     close(sockfd);
                     sockfd = -1;
                 }
@@ -71,74 +70,102 @@ void myClient::run()
         }
         else if (op == "gettime")
         {
-            char buffer = 1;
-            send(sockfd, &buffer, sizeof(buffer), 0);
-            message msg_rcv;
-            msgrcv(msgid, &msg_rcv, BUFFER_SIZE, 11, 0);        // 第三个参数表示优先接受11
-            time_t time = atol(msg_rcv.content);
-            cout << "Time: " << ctime(&time);
+            if (-1 != sockfd)
+            {
+                char buffer = GET_TIME;
+                send(sockfd, &buffer, sizeof(buffer), 0);
+                message msg_rcv;
+                msgrcv(msgid, &msg_rcv, BUFFER_SIZE, RES_TIME, 0);        // 第三个参数表示优先接受11
+                time_t time = atol(msg_rcv.content);
+                cout << "Time: " << ctime(&time);
+            }
+            else
+            {
+                cout << "You are unconnected!\n";
+            }
         }
         else if (op == "getname")
         {
-            char buffer = 2;
-            send(sockfd, &buffer, sizeof(buffer), 0);
-            message msg_rcv;
-            msgrcv(msgid, &msg_rcv, BUFFER_SIZE, 12, 0);
-            cout << "Name: " << msg_rcv.content << endl;
+            if(-1 != sockfd)
+            {
+                char buffer = GET_NAME;
+                send(sockfd, &buffer, sizeof(buffer), 0);
+                message msg_rcv;
+                msgrcv(msgid, &msg_rcv, BUFFER_SIZE, RES_NAME, 0);
+                cout << "Name: " << msg_rcv.content << endl;
+            }
+            else
+            {
+                cout << "You are unconnected!\n";
+            }
         }
         else if (op == "getclientlist")
         {
-            char buffer = 3;
-            send(sockfd, &buffer, sizeof(buffer), 0);
-
-            message msg_rcv;
-            msgrcv(msgid, &msg_rcv, BUFFER_SIZE, 13, 0);
-
-            cout << "IP\t\tPort\n";
-            char* ptr = msg_rcv.content;
-            while (*ptr)
+            if(-1 != sockfd)
             {
-                if ('#' == *ptr)
+                char buffer = GET_LIST;
+                send(sockfd, &buffer, sizeof(buffer), 0);
+
+                message msg_rcv;
+                msgrcv(msgid, &msg_rcv, BUFFER_SIZE, RES_LIST, 0);
+
+                cout << "IP\t\tPort\n";
+                char* ptr = msg_rcv.content;
+                while (*ptr)
                 {
-                    cout<<'\t';
+                    if ('#' == *ptr)
+                    {
+                        cout<<'\t';
+                    }
+                    else if ('*' == *ptr)
+                    {
+                        cout<<'\n';
+                    }
+                    else
+                    {
+                        cout<<(*ptr);
+                    }
+                    ptr++;
                 }
-                else if ('*' == *ptr)
-                {
-                    cout<<'\n';
-                }
-                else
-                {
-                    cout<<(*ptr);
-                }
-                ptr++;
+            }
+            else
+            {
+                cout << "You are unconnected!\n";
             }
         }
         else if (op == "send")
         {
-            char buffer[BUFFER_SIZE] = {0};
-            buffer[0] = 4;
-            sprintf(buffer + strlen(buffer), "%s", words[1].c_str());
-            sprintf(buffer + strlen(buffer), "#");
-            sprintf(buffer + strlen(buffer), "%s", words[2].c_str());
-            sprintf(buffer + strlen(buffer), "*");
-            for (int i = 3; i < words.size(); ++i)
+            if (-1 != sockfd)
             {
-                sprintf(buffer + strlen(buffer), "%s", words[i].c_str());
-                if (i != words.size())
+                char buffer[BUFFER_SIZE] = {0};
+                buffer[0] = TRY_SEND;
+                sprintf(buffer + strlen(buffer), "%s", words[1].c_str());
+                sprintf(buffer + strlen(buffer), "#");
+                sprintf(buffer + strlen(buffer), "%s", words[2].c_str());
+                sprintf(buffer + strlen(buffer), "*");
+                for (int i = 3; i < words.size(); ++i)
                 {
-                    sprintf(buffer + strlen(buffer), " ");
+                    sprintf(buffer + strlen(buffer), "%s", words[i].c_str());
+                    if (i != words.size())
+                    {
+                        sprintf(buffer + strlen(buffer), " ");
+                    }
+                    else
+                    {
+                        sprintf(buffer + strlen(buffer), "\n");
+                    }
                 }
-                else
-                {
-                    sprintf(buffer + strlen(buffer), "\n");
-                }
-            }
-            cout << "[ debug] sending msg: \n" << buffer << "\n[ debug] end\n";
-            send(sockfd, buffer, BUFFER_SIZE, 0);
+                cout << "You are tring to send a packet: \n" << buffer << endl;
+                send(sockfd, buffer, BUFFER_SIZE, 0);
 
-            message msg_rcv;
-            msgrcv(msgid, &msg_rcv, BUFFER_SIZE, 14, 0);
-            cout << msg_rcv.content << endl;
+                message msg_rcv;
+                msgrcv(msgid, &msg_rcv, BUFFER_SIZE, RES_SEND, 0);
+                cout << msg_rcv.content << endl;
+            }
+            else
+            {
+                cout << "You are unconnected!\n";
+            }
         }
         else if (op == "close")
         {
@@ -148,7 +175,7 @@ void myClient::run()
             }
             else
             {
-                cout << "No connection now.\n";
+                cout << "You are unconnected!\n";
             }
         }
         else if (op == "exit")
@@ -179,6 +206,33 @@ void myClient::run()
     }
 }
 
+void myClient::printMenu()
+{
+    cout << "Menu:\n"
+         << "        connect [IP] [port]\n"
+         << "        gettime\n"
+         << "        getname\n"
+         << "        getclientlist\n"
+         << "        send [IP] [port] [message]\n"
+         << "        close\n"
+         << "        exit\n"
+         << "        help\n";
+}
+
+void myClient::disconnect()
+{
+    char buffer = TRY_CLOSE;
+    send(sockfd, &buffer, sizeof(buffer), 0);
+    mutex mt;
+    mt.lock();
+    pthread_cancel(tidp);
+    mt.unlock();
+    close(sockfd);
+    sockfd = -1;
+    cout << "Connection closed. \n";
+    return;
+}
+
 void connection_handle(int sfd)
 {
     char buffer[BUFFER_SIZE];
@@ -193,10 +247,10 @@ void connection_handle(int sfd)
         memset(buffer, 0, BUFFER_SIZE);
         recv(sfd, buffer, BUFFER_SIZE, 0);
 
-        if (20 == buffer[0])
+        if (INDICATE == buffer[0])
         {
-            cout << "\n Get A Message:\n";
-            cout<<buffer + 1<<'\n';
+            cout << "\nYou get a new message:\n";
+            cout<<buffer + 1<< endl;
             continue;
         }
         
@@ -205,31 +259,4 @@ void connection_handle(int sfd)
         strcpy(msg.content, buffer + 1);
         msgsnd(msgid, &msg, BUFFER_SIZE, 0);
     }
-}
-
-void myClient::printMenu()
-{
-    cout << "Please input a command:\n"
-         << "- connect [IP] [port]\n"
-         << "- gettime\n"
-         << "- getname\n"
-         << "- getclientlist\n"
-         << "- send [IP] [port] [message]\n"
-         << "- close\n"
-         << "- exit\n"
-         << "- help\n";
-}
-
-void myClient::disconnect()
-{
-    char buffer = 9;
-    send(sockfd, &buffer, sizeof(buffer), 0);
-    mutex mt;
-    mt.lock();
-    pthread_cancel(tidp);
-    mt.unlock();
-    close(sockfd);
-    sockfd = -1;
-    cout << "Connection closed. \n";
-    return;
 }
