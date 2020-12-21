@@ -38,11 +38,11 @@ void myServer::run()
         sockaddr_in clientAddr;
         // socklen_t* addrLength;   // why not use this directly?
         unsigned int clientAddrLength = sizeof(clientAddr);
-        int connection_fd = accept(sockfd, (sockaddr*)&client, (socklen_t*)&clientAddrLength);
-        clientList.push_back(pair<int, ip_port>(connection_fd, (ip_port)( inet_ntoa(clientAddr.sin_addr), ntohs(clientAddr.cin_port))));
+        int connection_fd = accept(sockfd, (sockaddr*)&clientAddr, (socklen_t*)&clientAddrLength);
+        clientList.push_back(pair<int, ip_port>(connection_fd, (ip_port)( inet_ntoa(clientAddr.sin_addr), ntohs(clientAddr.sin_port))));
         cout << "[ debug] connection_fd: " << connection_fd << endl;
         cout << "[ debug] clientAddr: " << inet_ntoa(clientAddr.sin_addr) << endl;
-        cout << "[ debug] clientPort: " << ntohs(clientAddr.cin_port) << endl;
+        cout << "[ debug] clientPort: " << ntohs(clientAddr.sin_port) << endl;
         /**
          * TODO
          * 子线程：继续循环accept，并send hello给刚刚的客户
