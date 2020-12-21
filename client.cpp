@@ -9,12 +9,11 @@ int main()
 myClient::myClient()
 {
     sockfd = -1;
-    // TODO: 为什么是ftok("/",'a')
-    key_t msgkey = ftok("/",'a');
+    key_t msgkey = ftok(".",'a');
     msgid = msgget(msgkey, IPC_CREAT | 0666);
     if ( -1 == msgid)
     {
-        cout << "[ debug] msgget falied" << endl;
+        cout << "[ error] msgget falied" << endl;
     }
 }
 
@@ -24,7 +23,7 @@ myClient::~myClient()
     {
         disconnect();
     }
-    // msgctl(msgid, IPC_RMID, 0);      // 删除消息队列
+    // msgctl(msgid, IPC_RMID, 0);
 }
 
 void myClient::run()
@@ -35,17 +34,9 @@ void myClient::run()
         string command;
         cout << "> ";
         getline(cin, command);
-        /**
-         * TODO:  
-         * my split 
-         */
-            regex whitespace("\\s+");
-            vector<string> words(sregex_token_iterator(command.begin(), command.end(), whitespace, -1),
-                             sregex_token_iterator());
-        /**
-         * TODO:
-         * remember to check the length of `words[]` to prevent segment error
-         */
+        regex whitespace("\\s+");
+        vector<string> words(sregex_token_iterator(command.begin(), command.end(), whitespace, -1), sregex_token_iterator());
+
         string op = words[0];
         if (op == "")
         {
@@ -75,18 +66,15 @@ void myClient::run()
                 {
                     cout << "Connect success!\n";
                     pthread_create(&tidp, nullptr, start_rtn, &sockfd);
-                    // note: 
-                    //  参数：新线程id，null指针，新线程开始的地方，传入参数给start_rtn
                 }
             }
         }
         else if (op == "gettime")
         {
-            // 调用函数send
             char buffer = 1;
             send(sockfd, &buffer, sizeof(buffer), 0);
             message msg_rcv;
-            msgrcv(msgid, &msg_rcv, BUFFER_SIZE, 11, 0);    // 优先接受11
+            msgrcv(msgid, &msg_rcv, BUFFER_SIZE, 11, 0);        // 第三个参数表示优先接受11
             time_t time = atol(msg_rcv.content);
             cout << "Time: " << ctime(&time);
         }
@@ -95,20 +83,16 @@ void myClient::run()
             char buffer = 2;
             send(sockfd, &buffer, sizeof(buffer), 0);
             message msg_rcv;
-            msgrcv(msgid, &msg_rcv, BUFFER_SIZE, 12, 0);    // 优先接受12
+            msgrcv(msgid, &msg_rcv, BUFFER_SIZE, 12, 0);
             cout << "Name: " << msg_rcv.content << endl;
         }
         else if (op == "getclientlist")
         {
-            cout << "[ debug] in get client list\n";
             char buffer = 3;
             send(sockfd, &buffer, sizeof(buffer), 0);
 
-            cout << "[ debug] have sent to server\n";
             message msg_rcv;
-            msgrcv(msgid, &msg_rcv, BUFFER_SIZE, 13, 0);    // 优先接受13
-
-            cout << "[ debug] have received from son\n";
+            msgrcv(msgid, &msg_rcv, BUFFER_SIZE, 13, 0);
 
             cout << "IP\t\tPort\n";
             char* ptr = msg_rcv.content;
@@ -149,8 +133,9 @@ void myClient::run()
                     sprintf(buffer + strlen(buffer), "\n");
                 }
             }
-            cout << "[ debug] send msg: \n" << buffer << "\n[ debug] end\n";
+            cout << "[ debug] sending msg: \n" << buffer << "\n[ debug] end\n";
             send(sockfd, buffer, BUFFER_SIZE, 0);
+
             message msg_rcv;
             msgrcv(msgid, &msg_rcv, BUFFER_SIZE, 14, 0);
             cout << msg_rcv.content << endl;
@@ -160,7 +145,6 @@ void myClient::run()
             if (-1 != sockfd)
             {
                 disconnect();
-                cout << "Connection closed. \n";
             }
             else
             {
@@ -172,9 +156,8 @@ void myClient::run()
             if (-1 != sockfd)
             {
                 disconnect();
-                cout << "Connection closed. \n";
             }
-            cout << "Goodbye\n";
+            cout << "Client exit\n";
             exit(0);
         }
         else if (op == "help")
@@ -196,22 +179,19 @@ void myClient::run()
     }
 }
 
-// 新创建的子进程要做什么？
 void connection_handle(int sfd)
 {
-    // 创建时，第一次connect成功，应该print提示消息
     char buffer[BUFFER_SIZE];
-    recv(sfd, buffer, BUFFER_SIZE, 0);  // 接收消息
+    recv(sfd, buffer, BUFFER_SIZE, 0);
     cout << buffer << "> ";
     fflush(stdout); // 清空缓冲区
 
-    // 消息队列
-    key_t msgkey = ftok("/",'a');
+    key_t msgkey = ftok(".",'a');
     int msgid = msgget(msgkey, IPC_CREAT | 0666);
     while (1)
     {
         memset(buffer, 0, BUFFER_SIZE);
-        recv(sfd, buffer, BUFFER_SIZE, 0);  // 调用recv接受server的响应消息
+        recv(sfd, buffer, BUFFER_SIZE, 0);
 
         if (20 == buffer[0])
         {
@@ -219,11 +199,11 @@ void connection_handle(int sfd)
             cout<<buffer + 1<<'\n';
             continue;
         }
-        // 将消息类型和内容保存到msg中
+        
         message msg;
         msg.type = buffer[0];
         strcpy(msg.content, buffer + 1);
-        msgsnd(msgid, &msg, BUFFER_SIZE, 0);    // 发送给父进程
+        msgsnd(msgid, &msg, BUFFER_SIZE, 0);
     }
 }
 
@@ -243,13 +223,13 @@ void myClient::printMenu()
 void myClient::disconnect()
 {
     char buffer = 9;
-    // TODO: 发送fin包，是否有问题？
-    send(sockfd, &buffer, sizeof(buffer), 0);       // 发送包通知服务器delete it from clientList
+    send(sockfd, &buffer, sizeof(buffer), 0);
     mutex mt;
     mt.lock();
     pthread_cancel(tidp);
     mt.unlock();
     close(sockfd);
     sockfd = -1;
+    cout << "Connection closed. \n";
     return;
 }

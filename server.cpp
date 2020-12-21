@@ -33,28 +33,18 @@ void myServer::run()
     while(true)
     {
         sockaddr_in clientAddr;
-        // TODO: why not use this directly?
-        // socklen_t* addrLength;
         unsigned int clientAddrLength = sizeof(clientAddr);
-        
         int  connection_fd = accept(sockfd, (sockaddr*)&clientAddr, (socklen_t*)&clientAddrLength);
         clientList.push_back(pair<int, ip_port>(connection_fd, ip_port( inet_ntoa(clientAddr.sin_addr), ntohs(clientAddr.sin_port))));
         cout << "[ debug] connection_fd: " << connection_fd << endl;
         cout << "         clientAddr: " << inet_ntoa(clientAddr.sin_addr) << endl;
         cout << "         clientPort: " << ntohs(clientAddr.sin_port) << endl;
 
-        // note: 为什么不像client一样把tidp放在类内？
-        //       因为一个server会连接很多client
-        //       对每个连接，会新建一个子线程
         pthread_t tidp;
         pthread_create(&tidp, nullptr, start_rtn, &connection_fd);
-        // 参数：新线程id，null指针，新线程开始的地方，传入参数给start_rtn
     }
 }
 
-/**
- * 子线程：继续循环accept，并send hello给刚刚的客户
- */
 void connection_handle(int connection_fd)
 {
     char helloMsg[] = "hello\n";
@@ -66,13 +56,12 @@ void connection_handle(int connection_fd)
     while (true)
     {
 
-        memset(buffer_send, 0, BUFFER_SIZE);    // 重新分配内存
+        memset(buffer_send, 0, BUFFER_SIZE);
 
         recv(connection_fd, buffer_recv, BUFFER_SIZE, 0);
 
-        // TODO: 为什么在分析收到的包的时候需要临界区互斥？
-        mt.lock();
 
+        mt.lock();
         if (9 == buffer_recv[0])    // close
         {
             // client在调用disconnect时，已经通过close将自己的socket断开，
@@ -138,8 +127,8 @@ void connection_handle(int connection_fd)
                 }
             }
 
-            // buffer_send to connection_fd
-            // msg_send to destination client
+            // buffer_send[] to connection_fd
+            // msg_send[] to destination client
             buffer_send[0] = 14;
             if (-1 == dest)
             {
@@ -149,7 +138,6 @@ void connection_handle(int connection_fd)
             else
             {
                 sprintf(buffer_send + 1, "Send success.\n");
-
                 char msg_send[BUFFER_SIZE] = {0};
                 msg_send[0] = 20;
                 sprintf(msg_send + 1, "%s", content.c_str());
@@ -165,7 +153,7 @@ void connection_handle(int connection_fd)
                 flag=0;
             }
         }
-        memset(buffer_recv, 0, BUFFER_SIZE);    // 重新分配内存
+        memset(buffer_recv, 0, BUFFER_SIZE);
         mt.unlock();
     }
 }
