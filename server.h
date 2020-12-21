@@ -5,6 +5,7 @@
 #include <vector>
 #include <string>
 #include <regex>
+#include <mutex>
 
 #include <pthread.h>    // 多线程
 
@@ -19,7 +20,7 @@ using namespace std;
 // 为什么不能用vector<int connection_fd, sockaddr_in addr>的方式来表示client list呢
 typedef pair<string, int> ip_port;
 
-void connection_handle(int sfd); // TODO
+void connection_handle(int connection_fd); // TODO
 
 class myServer
 {
@@ -28,10 +29,16 @@ private:
     sockaddr_in addr;   // 服务器的address
 
     // 为什么不能放在类内呢？
+    //      因为connection_handle也需要用！
     // vector<pair<int, ip_port>> clientList;
 
     const int MAX_CONNECTION = 4;
 
+    static void* start_rtn(void* sfd)
+    {
+        connection_handle(*(int*)sfd);
+        return nullptr;
+    }
 public:
     myServer();     // 完成socket(), bind(), listen()的操作
     ~myServer();

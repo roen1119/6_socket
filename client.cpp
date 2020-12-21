@@ -10,16 +10,24 @@ myClient::myClient()
 {
     cout << "[ debug] in myClient::myClinet\n";
     sockfd = -1;
+    // 创建消息队列，实现进程间通信
+    key_t msgkey = ftok("/",'a');
+    msgid = msgget(msgkey, IPC_CREAT | 0666);
+    if ( -1 == msgid)
+    {
+        cout << "[ debug] msgget falied" << endl;
+    }
 }
 
 myClient::~myClient()
 {
     close(sockfd);
+    // msgctl(msgid, IPC_RMID, 0);      // 删除消息队列
 }
 
 void myClient::run()
 {
-    cout << "[ debug] in void myClient::run()\n";
+    cout << "[ debug] in myClient::run()\n";
     printMenu();
     while(true)
     {
@@ -46,7 +54,8 @@ void myClient::run()
         {
             if (-1 != sockfd)
             {
-                /* TODO
+                /**
+                 * TODO:
                  * 从serverAddr中获得
                  *  sin_addr.s_addr -ip地址
                  *  sin_port        -端口号
@@ -70,9 +79,11 @@ void myClient::run()
                 }
                 else
                 {
-                    cout << "[ debug] pthread_create()...\n";
-                    // new thread: 新线程的内存单元，null指针，新线程开始的地方，传入参数给start_rtn
+                    cout << "[ debug] Connect success...\n";
                     pthread_create(&tidp, nullptr, start_rtn, &sockfd);
+                    // note: 
+                    //  功能：创建新进程
+                    //  参数：新线程id，null指针，新线程开始的地方，传入参数给start_rtn
                 }
             }
         }
@@ -106,10 +117,13 @@ void myClient::run()
             {
                 cout << "[ debug] disconnect()...\n";
                 disconnect();
-                // TODO: 
-                //       关闭子线程
+                // TODO: 临界区互斥问题？
+                mutex mt;
+                mt.lock();
+                pthread_cancel(tidp);
+                mt.unlock();
                 sockfd = -1;
-                // cout << "Connection closed. \n";
+                cout << "Connection closed. \n";
             }
         }
         else if (op == "exit")
@@ -143,7 +157,29 @@ void myClient::run()
 void connection_handle(int sfd)
 {
     // 创建时，第一次connect成功，应该print提示消息
-    // TODO: keep receiving
+    char buffer[BUFFER_SIZE];
+    recv(sfd, buffer, BUFFER_SIZE, 0);  // 接收消息
+    cout << buffer << endl;
+    fflush(stdout); // 清空缓冲区
+
+    // 消息队列
+    key_t msgkey = ftok("/",'a');
+    int msgid = msgget(msgkey, IPC_CREAT | 0666);
+    while (1)
+    {
+        memset(buffer, 0, BUFFER_SIZE);
+        recv(sfd, buffer, BUFFER_SIZE, 0);  // 调用recv接受server的响应消息
+        if (20 == buffer[0])    // 类型20：直接打印
+        {
+            std::cout<<buffer + 1<<'\n';
+            continue;
+        }
+        // 将消息类型和内容保存到msg中
+        message msg;
+        msg.type = buffer[0];
+        strcpy(msg.content, buffer + 1);
+        msgsnd(msgid, &msg, BUFFER_SIZE, 0);    // 发送给父进程
+    }
 }
 
 void myClient::printMenu()
@@ -161,5 +197,8 @@ void myClient::printMenu()
 
 void myClient::disconnect()
 {
+    char buffer = 50;
+    send(sockfd, &buffer, sizeof(buffer), 0);       // 发送包通知服务器断开连接
+    close(sockfd);  // 关闭socket
     return;
 }
