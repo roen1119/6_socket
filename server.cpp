@@ -62,18 +62,18 @@ void connection_handle(int connection_fd)
 
     char buffer_recv[BUFFER_SIZE] = {0};
     char buffer_send[BUFFER_SIZE] = {0};
-
+    int flag = 1;
     while (true)
     {
+
         memset(buffer_send, 0, BUFFER_SIZE);    // 重新分配内存
 
         recv(connection_fd, buffer_recv, BUFFER_SIZE, 0);
 
         // TODO: 为什么在分析收到的包的时候需要临界区互斥？
         mt.lock();
-        cout << "[ debug] buffer_recv[0] = " << (int)(buffer_recv[0]) << endl;
 
-        if (0 == buffer_recv[0])    // close
+        if (9 == buffer_recv[0])    // close
         {
             // client在调用disconnect时，已经通过close将自己的socket断开，
             // 服务器不需要再处理连接的问题，只需要维护好自己的clientlist，将该client从表中删去即可。
@@ -120,12 +120,11 @@ void connection_handle(int connection_fd)
         else if (4 == buffer_recv[0])   // send
         {
             // 分析包
-            string recv(buffer_send + 1);
-            size_t pos0 = msg.find("#"), pos1 = msg.find("*");
-
-            string ip_addr = msg.substr(0, pos0);
-            int port = atoi(msg.substr((pos0 + 1), pos1 - pos0 - 1).c_str());
-            string content = msg.substr(pos1 + 1);
+            string recv(buffer_recv + 1);
+            size_t pos0 = recv.find("#"), pos1 = recv.find("*");
+            string ip_addr = recv.substr(0, pos0);
+            int port = atoi(recv.substr((pos0 + 1), pos1 - pos0 - 1).c_str());
+            string content = recv.substr(pos1 + 1);
             
             cout <<"send to "<< ip_addr << ":" << port << ':' << connection_fd << endl;
 
@@ -139,15 +138,17 @@ void connection_handle(int connection_fd)
                 }
             }
 
+            // buffer_send to connection_fd
+            // msg_send to destination client
             buffer_send[0] = 14;
             if (-1 == dest)
             {
                 cout << "destination unconnected\n";
-                sprintf(buffer_send + 1, "Sending success.\n");
+                sprintf(buffer_send + 1, "Sending falied.\n");
             }
             else
             {
-                sprintf(buffer_send + 1, "Send failed.\n");
+                sprintf(buffer_send + 1, "Send success.\n");
 
                 char msg_send[BUFFER_SIZE] = {0};
                 msg_send[0] = 20;
@@ -155,6 +156,14 @@ void connection_handle(int connection_fd)
                 send(dest, msg_send, strlen(msg_send), 0);
             }
             send(connection_fd, buffer_send, strlen(buffer_send), 0);
+        }
+        else if (0 == buffer_recv[0])
+        {
+            if(flag)
+            {
+                cout << "ghost0\n";
+                flag=0;
+            }
         }
         memset(buffer_recv, 0, BUFFER_SIZE);    // 重新分配内存
         mt.unlock();

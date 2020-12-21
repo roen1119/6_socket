@@ -8,9 +8,7 @@ int main()
 
 myClient::myClient()
 {
-    ifConnected = false;
     sockfd = -1;
-    // 创建消息队列，实现进程间通信
     // TODO: 为什么是ftok("/",'a')
     key_t msgkey = ftok("/",'a');
     msgid = msgget(msgkey, IPC_CREAT | 0666);
@@ -22,15 +20,16 @@ myClient::myClient()
 
 myClient::~myClient()
 {
-    close(sockfd);
+    if (-1 != sockfd)
+    {
+        disconnect();
+    }
     // msgctl(msgid, IPC_RMID, 0);      // 删除消息队列
 }
 
 void myClient::run()
 {
     printMenu();
-    sockfd = socket(AF_INET, SOCK_STREAM, 0);
-    cout << "[ debug] sockfd = " << sockfd << endl;
     while(true)
     {
         string command;
@@ -54,12 +53,13 @@ void myClient::run()
         }
         else if (op =="connect")
         {
-            if (true == ifConnected)
+            if (-1 != sockfd)
             {
-                cout << "Already connected to " << inet_ntoa(serverAddr.sin_addr) << ":" << ntohs(clientAddr.sin_port) << endl;
+                cout << "Already connected to " << inet_ntoa(serverAddr.sin_addr) << ":" << ntohs(serverAddr.sin_port) << endl;
             }
             else
             {
+                sockfd = socket(AF_INET, SOCK_STREAM, 0);
                 serverAddr.sin_family = AF_INET;
                 serverAddr.sin_port = htons(stoi(words[2]));
                 serverAddr.sin_addr.s_addr = inet_addr(words[1].c_str());
@@ -67,12 +67,13 @@ void myClient::run()
                 if( connect(sockfd, (sockaddr*)&serverAddr, (socklen_t)sizeof(serverAddr)) < 0 )
                 {
                     cout << "Connect failed!\n";
-                    ifConnected = false;
+                    cout << "[ debug] sockfd = " << sockfd << endl;
+                    close(sockfd);
+                    sockfd = -1;
                 }
                 else
                 {
                     cout << "Connect success!\n";
-                    ifConnected = true;
                     pthread_create(&tidp, nullptr, start_rtn, &sockfd);
                     // note: 
                     //  参数：新线程id，null指针，新线程开始的地方，传入参数给start_rtn
@@ -86,8 +87,8 @@ void myClient::run()
             send(sockfd, &buffer, sizeof(buffer), 0);
             message msg_rcv;
             msgrcv(msgid, &msg_rcv, BUFFER_SIZE, 11, 0);    // 优先接受11
-            time_t time = atol(msg_rcv.text);
-            cout << "Time: " << ctime(&time) << endl;
+            time_t time = atol(msg_rcv.content);
+            cout << "Time: " << ctime(&time);
         }
         else if (op == "getname")
         {
@@ -97,14 +98,19 @@ void myClient::run()
             msgrcv(msgid, &msg_rcv, BUFFER_SIZE, 12, 0);    // 优先接受12
             cout << "Name: " << msg_rcv.content << endl;
         }
-        else if (op == "getclients")
+        else if (op == "getclientlist")
         {
-            char buffer = 2;
+            cout << "[ debug] in get client list\n";
+            char buffer = 3;
             send(sockfd, &buffer, sizeof(buffer), 0);
+
+            cout << "[ debug] have sent to server\n";
             message msg_rcv;
             msgrcv(msgid, &msg_rcv, BUFFER_SIZE, 13, 0);    // 优先接受13
 
-            cout << "IP\tPort\n";
+            cout << "[ debug] have received from son\n";
+
+            cout << "IP\t\tPort\n";
             char* ptr = msg_rcv.content;
             while (*ptr)
             {
@@ -143,6 +149,7 @@ void myClient::run()
                     sprintf(buffer + strlen(buffer), "\n");
                 }
             }
+            cout << "[ debug] send msg: \n" << buffer << "\n[ debug] end\n";
             send(sockfd, buffer, BUFFER_SIZE, 0);
             message msg_rcv;
             msgrcv(msgid, &msg_rcv, BUFFER_SIZE, 14, 0);
@@ -150,7 +157,7 @@ void myClient::run()
         }
         else if (op == "close")
         {
-            if (true == ifConnected)
+            if (-1 != sockfd)
             {
                 disconnect();
                 cout << "Connection closed. \n";
@@ -162,7 +169,7 @@ void myClient::run()
         }
         else if (op == "exit")
         {
-            if (true == ifConnected)
+            if (-1 != sockfd)
             {
                 disconnect();
                 cout << "Connection closed. \n";
@@ -173,6 +180,14 @@ void myClient::run()
         else if (op == "help")
         {
             printMenu();
+        }
+        else if (op == "debugclose")
+        {
+            close(sockfd);
+        }
+        else if (op=="debugthread")
+        {
+            pthread_cancel(tidp);
         }
         else
         {
@@ -187,7 +202,7 @@ void connection_handle(int sfd)
     // 创建时，第一次connect成功，应该print提示消息
     char buffer[BUFFER_SIZE];
     recv(sfd, buffer, BUFFER_SIZE, 0);  // 接收消息
-    cout << buffer << "\n> ";
+    cout << buffer << "> ";
     fflush(stdout); // 清空缓冲区
 
     // 消息队列
@@ -198,11 +213,10 @@ void connection_handle(int sfd)
         memset(buffer, 0, BUFFER_SIZE);
         recv(sfd, buffer, BUFFER_SIZE, 0);  // 调用recv接受server的响应消息
 
-        // 不适宜交给父线程让它操作，因为client接收消息是被动
-        // 而父线程只能在主动发送请求下，才能接受消息做出响应
-        if (20 == buffer[0])    // 类型20：直接打印
+        if (20 == buffer[0])
         {
-            std::cout<<buffer + 1<<'\n';
+            cout << "\n Get A Message:\n";
+            cout<<buffer + 1<<'\n';
             continue;
         }
         // 将消息类型和内容保存到msg中
@@ -228,13 +242,14 @@ void myClient::printMenu()
 
 void myClient::disconnect()
 {
-    char buffer = 50;
+    char buffer = 9;
     // TODO: 发送fin包，是否有问题？
-    send(sockfd, &buffer, sizeof(buffer), 0);       // 发送包通知服务器断开连接
+    send(sockfd, &buffer, sizeof(buffer), 0);       // 发送包通知服务器delete it from clientList
     mutex mt;
     mt.lock();
     pthread_cancel(tidp);
     mt.unlock();
-    ifConnected = false;
+    close(sockfd);
+    sockfd = -1;
     return;
 }
