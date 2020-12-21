@@ -1,6 +1,5 @@
 #include "server.h"
 
-// TODO: 为什么不把clientList放进类内?
 vector< pair<int, ip_port> > clientList;
 mutex mt;
 
@@ -14,16 +13,12 @@ int main()
 
 myServer::myServer()
 {
-    cout << "[ debug] socket()...\n";
     sockfd = socket(AF_INET, SOCK_STREAM, 0);
-    cout << "[ debug] sockfd: " << sockfd << endl;
     addr.sin_family = AF_INET;
     addr.sin_port = htons(5412);
     addr.sin_addr.s_addr = htonl(INADDR_ANY);
 
-    cout << "[ debug] bind()...\n";
     bind(sockfd, (sockaddr*)&addr, (socklen_t)sizeof(addr));
-    cout << "[ debug] listen()...\n";
     listen(sockfd, MAX_CONNECTION);
     cout << "listening\n";
 }
@@ -38,30 +33,30 @@ void myServer::run()
     while(true)
     {
         sockaddr_in clientAddr;
-        // socklen_t* addrLength;   // why not use this directly?
+        // TODO: why not use this directly?
+        // socklen_t* addrLength;
         unsigned int clientAddrLength = sizeof(clientAddr);
+        
         int connection_fd = accept(sockfd, (sockaddr*)&clientAddr, (socklen_t*)&clientAddrLength);
         clientList.push_back(pair<int, ip_port>(connection_fd,  ip_port( inet_ntoa(clientAddr.sin_addr), ntohs(clientAddr.sin_port))));
         cout << "[ debug] connection_fd: " << connection_fd << endl;
-        cout << "[ debug] clientAddr: " << inet_ntoa(clientAddr.sin_addr) << endl;
-        cout << "[ debug] clientPort: " << ntohs(clientAddr.sin_port) << endl;
+        cout << "         clientAddr: " << inet_ntoa(clientAddr.sin_addr) << endl;
+        cout << "         clientPort: " << ntohs(clientAddr.sin_port) << endl;
 
         // note: 为什么不像client一样把tidp放在类内？
-        // 因为一个server会连接很多client
+        //       因为一个server会连接很多client
+        //       对每个连接，会新建一个子线程
         pthread_t tidp;
         pthread_create(&tidp, nullptr, start_rtn, &connection_fd);
         // 参数：新线程id，null指针，新线程开始的地方，传入参数给start_rtn
     }
 }
 
-
 /**
  * 子线程：继续循环accept，并send hello给刚刚的客户
  */
 void connection_handle(int connection_fd)
 {
-    // 为什么不在run里面，创建子进程之前完成hello的发送？
-    //  是因为发包都交给子进程完成吗？
     char helloMsg[] = "hello\n";
     send(connection_fd, helloMsg, strlen(helloMsg), 0);
 
@@ -86,6 +81,7 @@ void connection_handle(int connection_fd)
                     break;
                 }
             }
+            cout << "[ debug] erase from list\n";
             break;
         case 1: // getime
             break;

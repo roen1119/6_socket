@@ -20,6 +20,7 @@ using namespace std;
 #define BUFFER_SIZE 256
 void connection_handle(int sfd);
 
+// 用于消息队列
 struct message
 {
     long int type;
@@ -29,6 +30,7 @@ struct message
 class myClient
 {
 private:
+    bool ifConnected= false;
     int sockfd;                 // 客户端的socket描述字
     sockaddr_in serverAddr;     // 所连接的服务器的socket地址
     // note:
@@ -36,11 +38,8 @@ private:
     //  sin_port:代表端口号。
     //  sin_addr.s_addr:代表我们所建立的ip地址。
     
-    pthread_t tidp;             // 新创建的线程ID指向的内存单元
-    int msgid;                  // 消息队列标识符，用于进程间通信
-    // key_t msgkey = ftok("/",'a');
-    //  note: 为什么不吧msgkey放在class里面？因为connection_handle函数
-    //        并不在类内，它的参数是独立的。
+    pthread_t tidp;             // 子线程id
+    int msgid;                  // 消息队列标识符，用于线程间通信
 
     void disconnect();  // 断开连接，发送取消链接的包，并close对应socket
     void printMenu();

@@ -8,9 +8,10 @@ int main()
 
 myClient::myClient()
 {
-    cout << "[ debug] in myClient::myClinet\n";
+    ifConnected = false;
     sockfd = -1;
     // 创建消息队列，实现进程间通信
+    // TODO: 为什么是ftok("/",'a')
     key_t msgkey = ftok("/",'a');
     msgid = msgget(msgkey, IPC_CREAT | 0666);
     if ( -1 == msgid)
@@ -27,8 +28,9 @@ myClient::~myClient()
 
 void myClient::run()
 {
-    cout << "[ debug] in myClient::run()\n";
     printMenu();
+    sockfd = socket(AF_INET, SOCK_STREAM, 0);
+    cout << "[ debug] sockfd = " << sockfd << endl;
     while(true)
     {
         string command;
@@ -45,6 +47,7 @@ void myClient::run()
          * TODO:
          * remember to check the length of `words[]` to prevent segment error
          */
+
         string op = words[0];
         if (op == "")
         {
@@ -52,7 +55,7 @@ void myClient::run()
         }
         else if (op =="connect")
         {
-            if (-1 != sockfd)
+            if (true == ifConnected)
             {
                 /**
                  * TODO:
@@ -65,8 +68,6 @@ void myClient::run()
             }
             else
             {
-                sockfd = socket(AF_INET, SOCK_STREAM, 0);
-                cout << "[ debug] sockfd = " << sockfd << endl;
                 serverAddr.sin_family = AF_INET;
                 serverAddr.sin_port = htons(stoi(words[2]));
                 serverAddr.sin_addr.s_addr = inet_addr(words[1].c_str());
@@ -74,15 +75,14 @@ void myClient::run()
                 if( connect(sockfd, (sockaddr*)&serverAddr, (socklen_t)sizeof(serverAddr)) < 0 )
                 {
                     cout << "Connect failed!\n";
-                    close(sockfd);
-                    sockfd = -1;
+                    ifConnected = false;
                 }
                 else
                 {
-                    cout << "[ debug] Connect success...\n";
+                    cout << "Connect success!\n";
+                    ifConnected = true;
                     pthread_create(&tidp, nullptr, start_rtn, &sockfd);
                     // note: 
-                    //  功能：创建新进程
                     //  参数：新线程id，null指针，新线程开始的地方，传入参数给start_rtn
                 }
             }
@@ -109,42 +109,28 @@ void myClient::run()
         }
         else if (op == "close")
         {
-            if(-1 == sockfd)
+            if (false == ifConnected)
             {
-                cout << "No connection.\n";
+                cout << "No connection now.\n";
             }
             else
             {
-                cout << "[ debug] disconnect()...\n";
                 disconnect();
-                // TODO: 临界区互斥问题？
-                mutex mt;
-                mt.lock();
-                pthread_cancel(tidp);
-                mt.unlock();
-                sockfd = -1;
                 cout << "Connection closed. \n";
             }
         }
         else if (op == "exit")
         {
-            if(-1 != sockfd)
+            if (true == ifConnected)
             {
                 disconnect();
             }
-            cout << "Exit Clinet\n";
+            cout << "Goodbye\n";
             exit(0);
         }
         else if (op == "help")
         {
             printMenu();
-        }
-        else if (op=="debug")
-        {
-            if(words[1] == "sockfd")
-            {
-                cout << "[ debug] sockfd: " <<  sockfd << endl;
-            }
         }
         else
         {
@@ -159,7 +145,7 @@ void connection_handle(int sfd)
     // 创建时，第一次connect成功，应该print提示消息
     char buffer[BUFFER_SIZE];
     recv(sfd, buffer, BUFFER_SIZE, 0);  // 接收消息
-    cout << buffer << endl;
+    cout << buffer << "\n> ";
     fflush(stdout); // 清空缓冲区
 
     // 消息队列
@@ -169,6 +155,9 @@ void connection_handle(int sfd)
     {
         memset(buffer, 0, BUFFER_SIZE);
         recv(sfd, buffer, BUFFER_SIZE, 0);  // 调用recv接受server的响应消息
+
+        // 不适宜交给父线程让它操作，因为client接收消息是被动
+        // 而父线程只能在主动发送请求下，才能接受消息做出响应
         if (20 == buffer[0])    // 类型20：直接打印
         {
             std::cout<<buffer + 1<<'\n';
@@ -188,7 +177,7 @@ void myClient::printMenu()
          << "- connect [IP] [port]\n"
          << "- gettime\n"
          << "- getname\n"
-         << "- getclients\n"
+         << "- getclientlist\n"
          << "- send [IP] [port] [message]\n"
          << "- close\n"
          << "- exit\n"
@@ -199,6 +188,9 @@ void myClient::disconnect()
 {
     char buffer = 50;
     send(sockfd, &buffer, sizeof(buffer), 0);       // 发送包通知服务器断开连接
-    close(sockfd);  // 关闭socket
+    mutex mt;
+    mt.lock();
+    pthread_cancel(tidp);
+    mt.unlock();
     return;
 }
