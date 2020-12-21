@@ -39,7 +39,7 @@ void myServer::run()
         // socklen_t* addrLength;   // why not use this directly?
         unsigned int clientAddrLength = sizeof(clientAddr);
         int connection_fd = accept(sockfd, (sockaddr*)&clientAddr, (socklen_t*)&clientAddrLength);
-        clientList.push_back(pair<int, ip_port>(connection_fd, (ip_port)( inet_ntoa(clientAddr.sin_addr), ntohs(clientAddr.sin_port))));
+        clientList.push_back(pair<int, ip_port>(connection_fd,  ip_port( inet_ntoa(clientAddr.sin_addr), ntohs(clientAddr.sin_port))));
         cout << "[ debug] connection_fd: " << connection_fd << endl;
         cout << "[ debug] clientAddr: " << inet_ntoa(clientAddr.sin_addr) << endl;
         cout << "[ debug] clientPort: " << ntohs(clientAddr.sin_port) << endl;
