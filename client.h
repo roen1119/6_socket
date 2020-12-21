@@ -12,6 +12,8 @@
 #include <sys/socket.h> // socket基本接口
 #include <arpa/inet.h>  // htonl，htons，ntohl，ntohs等字节序转换函数
 #include <unistd.h>
+#include <sys/ipc.h>
+#include <sys/msg.h>
 
 using namespace std;
 

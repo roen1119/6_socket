@@ -68,7 +68,7 @@ void connection_handle(int connection_fd)
     char buffer_recv[BUFFER_SIZE];
     while (true)
     {
-        recv(connection_fd, BUFFER_SIZE, 0);
+        recv(connection_fd, buffer_recv, BUFFER_SIZE, 0);
         long int type = buffer_recv[0];
 
         // TODO: 为什么在分析收到的包的时候需要临界区互斥？
