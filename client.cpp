@@ -82,33 +82,82 @@ void myClient::run()
         else if (op == "gettime")
         {
             // 调用函数send
-            cout << "404 not done. \n";
+            char buffer = 1;
+            send(sockfd, &buffer, sizeof(buffer), 0);
+            message msg_rcv;
+            msgrcv(msgid, &msg_rcv, BUFFER_SIZE, 11, 0);    // 优先接受11
+            time_t time = atol(msg_rcv.text);
+            cout << "Time: " << ctime(&time) << endl;
         }
         else if (op == "getname")
         {
-            // 调用函数send
-            cout << "404 not done. \n";
+            char buffer = 2;
+            send(sockfd, &buffer, sizeof(buffer), 0);
+            message msg_rcv;
+            msgrcv(msgid, &msg_rcv, BUFFER_SIZE, 12, 0);    // 优先接受12
+            cout << "Name: " << msg_rcv.content << endl;
         }
         else if (op == "getclients")
         {
-            // 调用函数send
-            cout << "404 not done. \n";
+            char buffer = 2;
+            send(sockfd, &buffer, sizeof(buffer), 0);
+            message msg_rcv;
+            msgrcv(msgid, &msg_rcv, BUFFER_SIZE, 13, 0);    // 优先接受13
+
+            cout << "IP\tPort\n";
+            char* ptr = msg_rcv.content;
+            while (*ptr)
+            {
+                if ('#' == *ptr)
+                {
+                    cout<<'\t';
+                }
+                else if ('*' == *ptr)
+                {
+                    cout<<'\n';
+                }
+                else
+                {
+                    cout<<(*ptr);
+                }
+                ptr++;
+            }
         }
         else if (op == "send")
         {
-            // 调用函数send
-            cout << "404 not done. \n";
+            char buffer[BUFFER_SIZE] = {0};
+            buffer[0] = 4;
+            sprintf(buffer + strlen(buffer), "%s", words[1].c_str());
+            sprintf(buffer + strlen(buffer), "#");
+            sprintf(buffer + strlen(buffer), "%s", words[2].c_str());
+            sprintf(buffer + strlen(buffer), "*");
+            for (int i = 3; i < words.size(); ++i)
+            {
+                sprintf(buffer + strlen(buffer), "%s", words[i].c_str());
+                if (i != words.size())
+                {
+                    sprintf(buffer + strlen(buffer), " ");
+                }
+                else
+                {
+                    sprintf(buffer + strlen(buffer), "\n");
+                }
+            }
+            send(sockfd, buffer, BUFFER_SIZE, 0);
+            message msg_rcv;
+            msgrcv(msgid, &msg_rcv, BUFFER_SIZE, 14, 0);
+            cout << msg_rcv.content << endl;
         }
         else if (op == "close")
         {
-            if (false == ifConnected)
-            {
-                cout << "No connection now.\n";
-            }
-            else
+            if (true == ifConnected)
             {
                 disconnect();
                 cout << "Connection closed. \n";
+            }
+            else
+            {
+                cout << "No connection now.\n";
             }
         }
         else if (op == "exit")
@@ -116,6 +165,7 @@ void myClient::run()
             if (true == ifConnected)
             {
                 disconnect();
+                cout << "Connection closed. \n";
             }
             cout << "Goodbye\n";
             exit(0);

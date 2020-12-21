@@ -60,18 +60,24 @@ void connection_handle(int connection_fd)
     char helloMsg[] = "hello\n";
     send(connection_fd, helloMsg, strlen(helloMsg), 0);
 
-    char buffer_recv[BUFFER_SIZE];
+    char buffer_recv[BUFFER_SIZE] = {0};
+    char buffer_send[BUFFER_SIZE] = {0};
+
     while (true)
     {
+        memset(buffer_send, 0, BUFFER_SIZE);    // 重新分配内存
+
         recv(connection_fd, buffer_recv, BUFFER_SIZE, 0);
 
         // TODO: 为什么在分析收到的包的时候需要临界区互斥？
         mt.lock();
-        switch(buffer_recv[0])
+        cout << "[ debug] buffer_recv[0] = " << (int)(buffer_recv[0]) << endl;
+
+        if (0 == buffer_recv[0])    // close
         {
-        case 0: // close
             // client在调用disconnect时，已经通过close将自己的socket断开，
             // 服务器不需要再处理连接的问题，只需要维护好自己的clientlist，将该client从表中删去即可。
+            cout << "close connection: " << connection_fd << endl;
             for( auto it = clientList.begin(); it != clientList.end(); ++it)
             {
                 if ((*it).first == connection_fd)
@@ -81,17 +87,74 @@ void connection_handle(int connection_fd)
                     break;
                 }
             }
-            break;
-        case 1: // getime
-            break;
-        case 2: // getname
-            break;
-        case 3: // getclients
-            break;
-        case 4: // send
-            break;
-        case 5:
-            break;
+        }
+        else if (1 == buffer_recv[0])   // gettime
+        {
+            cout << "gettime: " << connection_fd << endl;
+            time_t t;
+            time(&t);
+            buffer_send[0] = 11;
+            sprintf(buffer_send + strlen(buffer_send), "%ld", t);
+            send(connection_fd, buffer_send, strlen(buffer_send), 0);
+        }
+        else if (2 == buffer_recv[0])   // getname
+        {
+            cout << "getname: " << connection_fd << endl;
+            buffer_send[0] = 12;
+            gethostname(buffer_send + strlen(buffer_send), sizeof(buffer_send) - sizeof(char));
+            send(connection_fd, buffer_send, strlen(buffer_send), 0);
+        }
+        else if (3 == buffer_recv[0])   // getclientlist
+        {
+            cout << "getclientlist: " << connection_fd << endl;
+            buffer_send[0] = 13;
+            for (auto& it: clientList)
+            {
+                sprintf(buffer_send + strlen(buffer_send), "%s", it.second.first.c_str());
+                sprintf(buffer_send + strlen(buffer_send), "#");
+                sprintf(buffer_send + strlen(buffer_send), "%d", it.second.second);
+                sprintf(buffer_send + strlen(buffer_send), "*");
+            }
+            send(connection_fd, buffer_send, strlen(buffer_send), 0);
+        }
+        else if (4 == buffer_recv[0])   // send
+        {
+            // 分析包
+            string recv(buffer_send + 1);
+            size_t pos0 = msg.find("#"), pos1 = msg.find("*");
+
+            string ip_addr = msg.substr(0, pos0);
+            int port = atoi(msg.substr((pos0 + 1), pos1 - pos0 - 1).c_str());
+            string content = msg.substr(pos1 + 1);
+            
+            cout <<"send to "<< ip_addr << ":" << port << ':' << connection_fd << endl;
+
+            int dest = -1;
+            for (auto it = clientList.begin(); it != clientList.end(); ++it)
+            {
+                if (it->second.first == ip_addr && it->second.second == port)
+                {
+                    dest = it->first;
+                    break;
+                }
+            }
+
+            buffer_send[0] = 14;
+            if (-1 == dest)
+            {
+                cout << "destination unconnected\n";
+                sprintf(buffer_send + 1, "Sending success.\n");
+            }
+            else
+            {
+                sprintf(buffer_send + 1, "Send failed.\n");
+
+                char msg_send[BUFFER_SIZE] = {0};
+                msg_send[0] = 20;
+                sprintf(msg_send + 1, "%s", content.c_str());
+                send(dest, msg_send, strlen(msg_send), 0);
+            }
+            send(connection_fd, buffer_send, strlen(buffer_send), 0);
         }
         memset(buffer_recv, 0, BUFFER_SIZE);    // 重新分配内存
         mt.unlock();
