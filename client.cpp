@@ -199,6 +199,25 @@ void myClient::run()
         {
             pthread_cancel(tidp);
         }
+        else if (op=="testgetname")
+        {
+            if(-1 != sockfd)
+            {
+                for(int i=0; i<3000; ++i)
+                {
+                    cout << "[ test] getname: " << i << endl;
+                    char buffer = GET_NAME;
+                    send(sockfd, &buffer, sizeof(buffer), 0);
+                    message msg_rcv;
+                    msgrcv(msgid, &msg_rcv, BUFFER_SIZE, RES_NAME, 0);
+                    cout << "Name: " << msg_rcv.content << endl;
+                }
+            }
+            else
+            {
+                cout << "You are unconnected!\n";
+            }
+        }
         else
         {
             cout << op << ": illegal operation\n";
