@@ -47,7 +47,6 @@ void myClient::run()
          * TODO:
          * remember to check the length of `words[]` to prevent segment error
          */
-
         string op = words[0];
         if (op == "")
         {
@@ -57,14 +56,7 @@ void myClient::run()
         {
             if (true == ifConnected)
             {
-                /**
-                 * TODO:
-                 * 从serverAddr中获得
-                 *  sin_addr.s_addr -ip地址
-                 *  sin_port        -端口号
-                 * 并通过ntohl函数转换成string，然后打印
-                 */
-                cout << "Already connected to \n";
+                cout << "Already connected to " << inet_ntoa(serverAddr.sin_addr) << ":" << ntohs(clientAddr.sin_port) << endl;
             }
             else
             {
@@ -187,10 +179,12 @@ void myClient::printMenu()
 void myClient::disconnect()
 {
     char buffer = 50;
+    // TODO: 发送fin包，是否有问题？
     send(sockfd, &buffer, sizeof(buffer), 0);       // 发送包通知服务器断开连接
     mutex mt;
     mt.lock();
     pthread_cancel(tidp);
     mt.unlock();
+    ifConnected = false;
     return;
 }

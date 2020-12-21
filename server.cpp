@@ -37,8 +37,8 @@ void myServer::run()
         // socklen_t* addrLength;
         unsigned int clientAddrLength = sizeof(clientAddr);
         
-        int connection_fd = accept(sockfd, (sockaddr*)&clientAddr, (socklen_t*)&clientAddrLength);
-        clientList.push_back(pair<int, ip_port>(connection_fd,  ip_port( inet_ntoa(clientAddr.sin_addr), ntohs(clientAddr.sin_port))));
+        int  connection_fd = accept(sockfd, (sockaddr*)&clientAddr, (socklen_t*)&clientAddrLength);
+        clientList.push_back(pair<int, ip_port>(connection_fd, ip_port( inet_ntoa(clientAddr.sin_addr), ntohs(clientAddr.sin_port))));
         cout << "[ debug] connection_fd: " << connection_fd << endl;
         cout << "         clientAddr: " << inet_ntoa(clientAddr.sin_addr) << endl;
         cout << "         clientPort: " << ntohs(clientAddr.sin_port) << endl;
@@ -64,24 +64,23 @@ void connection_handle(int connection_fd)
     while (true)
     {
         recv(connection_fd, buffer_recv, BUFFER_SIZE, 0);
-        long int type = buffer_recv[0];
 
         // TODO: 为什么在分析收到的包的时候需要临界区互斥？
         mt.lock();
-        switch(type)
+        switch(buffer_recv[0])
         {
         case 0: // close
             // client在调用disconnect时，已经通过close将自己的socket断开，
             // 服务器不需要再处理连接的问题，只需要维护好自己的clientlist，将该client从表中删去即可。
             for( auto it = clientList.begin(); it != clientList.end(); ++it)
             {
-                if((*it).first == connection_fd)
+                if ((*it).first == connection_fd)
                 {
-                    clientList.erase(it);
+                    it = clientList.erase(it);
+                    cout << "[ debug] erase from list\n";
                     break;
                 }
             }
-            cout << "[ debug] erase from list\n";
             break;
         case 1: // getime
             break;

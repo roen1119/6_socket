@@ -34,9 +34,9 @@ private:
     int sockfd;                 // 客户端的socket描述字
     sockaddr_in serverAddr;     // 所连接的服务器的socket地址
     // note:
-    //  sin_family:对应的是地址类型：AF_INET代表ipv4。
-    //  sin_port:代表端口号。
-    //  sin_addr.s_addr:代表我们所建立的ip地址。
+    //  sin_family:对应的是地址类型：AF_INET代表ipv4
+    //  sin_port:代表端口号
+    //  sin_addr.s_addr:代表我们所建立的ip地址
     
     pthread_t tidp;             // 子线程id
     int msgid;                  // 消息队列标识符，用于线程间通信
