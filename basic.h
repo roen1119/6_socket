@@ -17,19 +17,19 @@
 #define BUFFER_SIZE 256
 
 // 请求数据包
-#define GET_TIME 1
-#define GET_NAME 2
-#define GET_LIST 3
-#define TRY_SEND 4
+#define GET_TIME 5
+#define GET_NAME 6
+#define GET_LIST 7
+#define TRY_SEND 8
 #define TRY_CLOSE 9
 
 // 响应数据包
-#define RES_TIME 11
-#define RES_NAME 12
-#define RES_LIST 13
-#define RES_SEND 14
+#define RES_TIME 15
+#define RES_NAME 16
+#define RES_LIST 17
+#define RES_SEND 18
 
 // 指示数据包
-#define INDICATE 20 
+#define INDICATE 19
 
 #endif

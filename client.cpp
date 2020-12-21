@@ -99,7 +99,7 @@ void myClient::run()
                 cout << "You are unconnected!\n";
             }
         }
-        else if (op == "getclientlist")
+        else if (op == "getclient")
         {
             if(-1 != sockfd)
             {
@@ -208,15 +208,15 @@ void myClient::run()
 
 void myClient::printMenu()
 {
-    cout << "Menu:\n"
-         << "        connect [IP] [port]\n"
-         << "        gettime\n"
-         << "        getname\n"
-         << "        getclientlist\n"
-         << "        send [IP] [port] [message]\n"
-         << "        close\n"
-         << "        exit\n"
-         << "        help\n";
+    cout << "What do you want to do?\n"
+         << "     - connect [IP] [port]\n"
+         << "     - gettime\n"
+         << "     - getname\n"
+         << "     - getclient\n"
+         << "     - send [IP] [port] [message]\n"
+         << "     - close\n"
+         << "     - exit\n"
+         << "     - help\n";
 }
 
 void myClient::disconnect()
@@ -225,7 +225,7 @@ void myClient::disconnect()
     send(sockfd, &buffer, sizeof(buffer), 0);
     mutex mt;
     mt.lock();
-    pthread_cancel(tidp);
+    // pthread_cancel(tidp);
     mt.unlock();
     close(sockfd);
     sockfd = -1;

@@ -5,8 +5,6 @@ mutex mt;
 
 int main()
 {
-    // TODO:设置异步
-    // ios::sync_with_stdio(false);
     myServer server;
     server.run();
 }
@@ -107,7 +105,7 @@ void connection_handle(int connection_fd)
             int port = atoi(recv.substr((pos0 + 1), pos1 - pos0 - 1).c_str());
             string content = recv.substr(pos1 + 1);
             
-            cout <<"Sending a message to "<< ip_addr << ":" << port << ". And the content is: \n" << content;
+            cout <<"Sending a message to "<< ip_addr << ":" << port << ". And the content is: \n" << content << endl;
 
             int dest = -1;
             for (auto it = clientList.begin(); it != clientList.end(); ++it)
