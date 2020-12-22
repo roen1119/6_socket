@@ -259,7 +259,7 @@ void child_thread(int sfd)
         if (INDICATE == buffer[0])
         {
             cout << "\nYou get a new message:\n";
-            cout<<buffer + 1<< endl;
+            cout << buffer + 1 << endl;
             continue;
         }
         
