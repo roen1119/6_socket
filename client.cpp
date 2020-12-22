@@ -31,18 +31,23 @@ void myClient::run()
     printMenu();
     while(true)
     {
+        // get a command from user
         string command;
         cout << "> ";
         getline(cin, command);
-        regex whitespace("\\s+");
-        vector<string> words(sregex_token_iterator(command.begin(), command.end(), whitespace, -1), sregex_token_iterator());
 
+        // split into words
+        regex split_words("\\s+");
+        vector<string> words(sregex_token_iterator(command.begin(), command.end(), 
+                            split_words, -1), sregex_token_iterator());
+
+        // get the operation type
         string op = words[0];
         if (op == "")
         {
             continue;
         }
-        else if (op =="connect")
+        else if (op == "connect")
         {
             if (-1 != sockfd)
             {
@@ -195,7 +200,7 @@ void myClient::run()
         {
             close(sockfd);
         }
-        else if (op=="debugthread")
+        else if (op == "debugthread")
         {
             pthread_cancel(tidp);
         }
@@ -233,20 +238,24 @@ void myClient::disconnect()
     return;
 }
 
-void connection_handle(int sfd)
+void child_thread(int sfd)
 {
+    // receive "hello" after connection
     char buffer[BUFFER_SIZE];
     recv(sfd, buffer, BUFFER_SIZE, 0);
     cout << buffer << "> ";
-    fflush(stdout); // 清空缓冲区
+    fflush(stdout);
 
+    // get message queue
     key_t msgkey = ftok(".",'a');
     int msgid = msgget(msgkey, IPC_CREAT | 0666);
     while (1)
     {
+        // recv
         memset(buffer, 0, BUFFER_SIZE);
         recv(sfd, buffer, BUFFER_SIZE, 0);
 
+        // receive a message
         if (INDICATE == buffer[0])
         {
             cout << "\nYou get a new message:\n";
@@ -254,9 +263,11 @@ void connection_handle(int sfd)
             continue;
         }
         
+        // receive response
         message msg;
         msg.type = buffer[0];
         strcpy(msg.content, buffer + 1);
         msgsnd(msgid, &msg, BUFFER_SIZE, 0);
     }
 }
+

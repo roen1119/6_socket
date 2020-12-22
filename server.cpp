@@ -46,7 +46,8 @@ void myServer::run()
     }
 }
 
-void connection_handle(int connection_fd)
+
+void child_thread(int connection_fd)
 {
     char helloMsg[] = "hello\n";
     send(connection_fd, helloMsg, strlen(helloMsg), 0);

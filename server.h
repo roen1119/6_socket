@@ -7,7 +7,7 @@ using namespace std;
 
 typedef pair<string, int> ip_port;
 
-void connection_handle(int connection_fd);
+void child_thread(int connection_fd);
 
 class myServer
 {
@@ -19,7 +19,7 @@ private:
 
     static void* start_rtn(void* sfd)
     {
-        connection_handle(*(int*)sfd);
+        child_thread(*(int*)sfd);
         return nullptr;
     }
     
