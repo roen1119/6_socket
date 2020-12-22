@@ -223,12 +223,21 @@ void myClient::disconnect()
 {
     char buffer = TRY_CLOSE;
     send(sockfd, &buffer, sizeof(buffer), 0);
+
+    if (0 != shutdown(sockfd, SHUT_RDWR))
+    {
+        cout << "shutdown error\n";
+    }
+
     mutex mt;
     mt.lock();
-    // pthread_cancel(tidp);
+    pthread_cancel(tidp);
     mt.unlock();
+    msgctl(msgid, IPC_RMID, 0);
+
     close(sockfd);
     sockfd = -1;
+
     cout << "Connection closed. \n";
     return;
 }
