@@ -6,7 +6,7 @@
 using namespace std;
 
 
-void connection_handle(int sfd);
+void child_thread(int sfd);
 
 struct message
 {
@@ -30,7 +30,7 @@ private:
     // 新创建的线程从start_rtn函数的地址开始运行
     static void * start_rtn(void * sfd)
     {
-        connection_handle(*(int*) sfd);
+        child_thread(*(int*) sfd);
         return nullptr;
     }
 

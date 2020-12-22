@@ -34,8 +34,9 @@ void myServer::run()
     {
         sockaddr_in clientAddr;
         unsigned int clientAddrLength = sizeof(clientAddr);
-        int  connection_fd = accept(sockfd, (sockaddr*)&clientAddr, (socklen_t*)&clientAddrLength);
-        clientList.push_back(pair<int, ip_port>(connection_fd, ip_port( inet_ntoa(clientAddr.sin_addr), ntohs(clientAddr.sin_port))));
+        int connection_fd = accept(sockfd, (sockaddr*)&clientAddr, (socklen_t*)&clientAddrLength);
+        clientList.push_back(pair<int, ip_port>(connection_fd, 
+                ip_port( inet_ntoa(clientAddr.sin_addr), ntohs(clientAddr.sin_port))));
         cout << "New connection:\n";
         cout << "         connection_fd: " << connection_fd << endl;
         cout << "         clientAddr: " << inet_ntoa(clientAddr.sin_addr) << endl;
@@ -46,7 +47,8 @@ void myServer::run()
     }
 }
 
-void connection_handle(int connection_fd)
+
+void child_thread(int connection_fd)
 {
     char helloMsg[] = "hello\n";
     send(connection_fd, helloMsg, strlen(helloMsg), 0);
@@ -58,7 +60,7 @@ void connection_handle(int connection_fd)
         memset(buffer_send, 0, BUFFER_SIZE);
         recv(connection_fd, buffer_recv, BUFFER_SIZE, 0);
         mt.lock();
-        if (TRY_CLOSE == buffer_recv[0])    // close
+        if (TRY_CLOSE == buffer_recv[0])       // close
         {
             cout << "Close connection: " << connection_fd << endl;
             for( auto it = clientList.begin(); it != clientList.end(); ++it)
@@ -107,7 +109,8 @@ void connection_handle(int connection_fd)
             int port = atoi(recv.substr((pos0 + 1), pos1 - pos0 - 1).c_str());
             string content = recv.substr(pos1 + 1);
             
-            cout <<"Sending a message to "<< ip_addr << ":" << port << ". And the content is: \n" << content << endl;
+            cout <<"Sending a message to "<< ip_addr << ":" << port 
+                    << ". And the content is: \n" << content << endl;
 
             int dest = -1;
             for (auto it = clientList.begin(); it != clientList.end(); ++it)
