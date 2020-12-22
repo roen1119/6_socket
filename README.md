@@ -1,5 +1,4 @@
-# mysocket
-
+# Socket Basics
 
 ### 要求
 
@@ -17,7 +16,7 @@
 
 - 传输层：TCP
 
-### 服务器
+#### 服务器
 
 并发处理多个客户端的请求。请求的类型如下：
 
@@ -27,7 +26,7 @@ bind() 绑定监听端口5412
 
 listen()，设置连接等待队列长度(MAX_CONNECTION)
 
-循环调用accept()，接收到socket句柄后创建新的客户端项目，而后创建子进程继续调用accept()，send() hello给刚才的客户端。接着，循环调用receive()
+循环调用accept()，接收到socket句柄后创建新的客户端项目，并创建子进程继续调用accept()，send() hello给刚才的客户端。接着，循环调用receive()
 
 - 时间 time(), send()
 - 名称 GetComputerName(), send()
@@ -35,7 +34,7 @@ listen()，设置连接等待队列长度(MAX_CONNECTION)
 - 转发send()
 - 异步多线程
 
-### 客户端
+#### 客户端
 
 人机交互：命令行；与服务器的通信。以下功能都通过发包、收包的流程实现。
 
@@ -73,29 +72,36 @@ socket()
 
   判断是否连接，若是则先断开连接。退出程序。
 
-##### Pipeling
+
+
+#### Pipeline
 
 <img src="assets/20190108140458505.png">
 
+
+
+
+
+### socket相关函数
+
 ##### Server
 
-|      函数      |   描述   |
-| :------------: | :------: |
-|    socket()    |   创建   |
-|     bind()     |   绑定   |
-|    listen()    |   监听   |
-|    accept()    | 等待连接 |
-| read()/write() |          |
-|    close()     |          |
+|     函数      |   描述   |
+| :-----------: | :------: |
+|   socket()    |   创建   |
+|    bind()     |   绑定   |
+|   listen()    |   监听   |
+|   accept()    | 等待连接 |
+| send()/recv() |          |
 
 ##### Client
 
-|      函数      | 描述 |
-| :------------: | :--: |
-|    socket()    |      |
-|   connect()    |      |
-| read()/write() |      |
-|    close()     |      |
+|     函数      | 描述 |
+| :-----------: | :--: |
+|   socket()    | 创建 |
+|   connect()   | 连接 |
+| send()/recv() |      |
+|    close()    |      |
 
 
 
@@ -168,29 +174,7 @@ bind()函数把一个地址族中的特定地址赋给socket.
 
 服务器在启动的时候都会绑定一个众所周知的地址（如ip地址+端口号），用于提供服务。
 
-> 客户端就不用指定，有系统自动分配一个端口号和自身的ip地址组合。这就是为什么通常服务器端在listen之前会调用bind()，而客户端就不会调用，而是在connect()时由系统随机生成一个。
-
-
-
-##### connect()
-
-```c++
-int connect(int sockfd, const struct sockaddr *addr, socklen_t addrlen);
-```
-
-参数详解：
-
-- 客户端的socket描述字
-- 服务器的socket地址
-- socket地址的长度
-
-客户端通过调用connect函数来建立与TCP服务器的连接。
-
-##### 笔记
-
-要判断socket是否连接，还需要其他的socket函数，很麻烦。所以在这里设置为：
-
-在输入命令connect之后再进行socket()初始化，默认获得了socketfd就等同于已连接。
+> 通常服务器端在listen之前会调用bind()，而客户端不需调用，而是在connect()时由系统生成一个端口号。
 
 
 
@@ -208,7 +192,7 @@ listen函数的第一个参数即为要监听的socket描述字，第二个参�
 
 ##### accept()
 
-TCP服务器端依次调用socket()、bind()、listen()之后，就会监听指定的socket地址了。TCP客户端依次调用socket()、connect()之后就想TCP服务器发送了一个连接请求。TCP服务器监听到这个请求之后，就会调用accept()函数取接收请求，这样连接就建立好了。
+TCP服务器端依次调用socket()、bind()、listen()之后，就会监听指定的socket地址了。TCP客户端依次调用socket()、connect()之后就想TCP服务器发送了一个连接请求。TCP服务器监听到这个请求之后，就会调用accept()函数去接收请求，这样连接就建立好了。
 
 ```c++
 int accept(int sockfd, struct sockaddr *addr, socklen_t *addrlen);
@@ -216,36 +200,86 @@ int accept(int sockfd, struct sockaddr *addr, socklen_t *addrlen);
 
 参数：
 
-- 服务器的socket描述字，是服务器开始调用socket()函数时生成的
+- 服务器的socket描述字，是服务器开始调用socket()函数时生成的，称为监听socket描述字
 - 用于返回客户端的协议地址
-- 协议地址的长度。
+- 协议地址的长度
 
 如果accpet成功，那么其返回值是由内核自动生成的一个全新的描述字，代表与返回客户的TCP连接。
 
-> accept的第一个参数为服务器的socket描述字，是服务器开始调用socket()函数生成的，称为监听socket描述字；而accept函数返回的是已连接的socket描述字。一个服务器通常通常仅仅只创建一个监听socket描述字，它在该服务器的生命周期内一直存在。内核为每个由服务器进程接受的客户连接创建了一个已连接socket描述字，当服务器完成了对某个客户的服务，相应的已连接socket描述字就被关闭。
+> 一个服务器通常通常仅仅只创建一个监听socket描述字，它在该服务器的生命周期内一直存在。而每个服务器-客户端的连接都有一个对应的socket描述字，当服务器完成了对某个客户的服务，相应的已连接socket描述字就被关闭。
+
+
+
+##### connect()
+
+```c++
+int connect(int sockfd, const struct sockaddr *addr, socklen_t addrlen);
+```
+
+参数详解：
+
+- 客户端的socket描述字
+- 服务器的socket地址
+- socket地址的长度
+
+客户端通过调用connect函数来建立与TCP服务器的连接。
+
+
+
+建立连接后，客户端和服务器之间就可以开始进行数据传输，操作函数有下面几对：
+
+- read() / write()
+- recv() / send()
+- recvmsg() / sendmsg()
+- recvfrom() / sendto()
+
+实验中使用的是recv() / send()这一对。
+
+
+
+##### send()
+
+```c++
+ssize_t send(int sockfd, const void *buf, size_t len, int flags);
+```
+
+- sockfd：发送端的socket描述字
+  - 对客户端来说，是客户端的socket描述字
+  - 对服务器来说，是连接的socket描述字
+- buf：发送数据的缓冲区
+- len：发送数据的字节数
+- flags：一般设置为0即可
+
+##### recv()
+
+```c++
+ssize_t recv(int sockfd, void *buf, size_t len, int flags);
+```
 
 
 
 ##### close()
 
-在服务器与客户端建立连接之后，会进行一些读写操作，完成了读写操作就要关闭相应的socket描述字，好比操作完打开的文件要调用fclose关闭打开的文件。
+在服务器与客户端需要断开连接时，需要关闭相应的socket描述字。
 
 ```c++
 #include <unistd.h>
 int close(int fd);
 ```
 
+close()的参数为客户端的socket描述字。close()之后，该描述字不能再由调用进程使用，也就是说不能再作为send或recv的第一个参数。
 
 
 
 
 
+### 进程相关函数
 
+#### 进程的创建和取消
 
-
-
-
-
+```c++
+#include <pthread.h>
+```
 
 ##### pthread_create()
 
@@ -260,8 +294,88 @@ int pthread_create(
 
 参数详解：
 
-- 新创建的线程ID指向的内存单元
+- 新创建的线程id
 - 线程属性，默认为NULL
 - 新创建的线程从start_rtn函数的地址开始运行
 - 默认为NULL。若上述函数需要参数，将参数放入结构中并将地址作为arg传入
 
+
+
+##### pthread_cancel()
+
+```c++
+int pthread_cancel(pthread_t pid)
+```
+
+pthread_cancel调用并不等待线程终止，它只提出请求。线程在取消请求(pthread_cancel)发出后会继续运行，直到到达某个取消点(CancellationPoint)。取消点是线程检查是否被取消并按照请求进行动作的一个位置。
+
+
+
+#### 进程间通信
+
+```c++
+#include <sys/msg.h>
+```
+
+Linux提供了一系列消息队列的函数接口。通过这些接口，我们可以实现在子进程与父进程之间的通信，当client父进程向server发送请求消息后，不断进行recv操作的子进程将接收到server的响应消息，子进程通过消息队列，将消息发送给父进程，父进程对消息进行处理，反馈给用户。
+
+##### msgget()
+
+```c++
+int msgget(key_t key, int msgflg);
+```
+
+- key：一个键，用于命名某个特定的消息队列。函数将它与已有的消息队列的关键字进行比较，以判断消息队列对象是否已经创建
+
+- msgflg：权限标志，表示消息队列的访问权限
+
+  msgflg可以与IPC_CREAT做或操作，表示当key所命名的消息队列不存在时创建一个消息队列，如果key所命名的消息队列存在时，IPC_CREAT标志会被忽略，而只返回一个标识符。
+
+函数返回一个以key命名的消息队列的标识符（非零整数），失败时返回-1.
+
+##### key_t key
+
+通常，消息队列的键值使用以下方式创建：
+
+```c++
+key = ftok(".",'a')
+```
+
+
+
+##### msgsend()
+
+```c++
+int msgsend(int msgid, const void *msg_ptr, size_t msg_sz, int msgflg);
+```
+
+- msgid：由msgget函数返回的消息队列标识符
+
+- msg_ptr：指向准备发送的消息的指针
+
+  消指针msg_ptr所指向的消息结构一定要是以一个长整型成员变量开始的结构体，接收函数将用这个成员来确定消息的类型。所以消息结构要定义成这样： 
+
+  ```c++
+  struct my_message {
+      long int message_type;
+      /* The data you wish to transfer */
+  };
+  ```
+
+- msg_sz：消息的长度，注意不是整个结构体的长度，而是不包括长整型消息类型成员变量的长度。
+
+- msgflg：用于控制当前消息队列满或队列消息到达系统范围的限制时将要发生的事情。
+
+
+
+##### msgrcv()
+
+```c++
+int msgrcv(int msgid, void *msg_ptr, size_t msg_st, long int msgtype, int msgflg);
+```
+
+- msgid：
+- msg_ptr：
+- msg_st：
+- msgtype：可以实现一种简单的接收优先级。如果msgtype为0，就获取队列中的第一个消息。如果它的值大于零，将获取具有相同消息类型的第一个信息。如果它小于零，就获取类型等于或小于msgtype的绝对值的第一个消息
+- msgflg：用于控制当队列中没有相应类型的消息可以接收时将发生的事情
