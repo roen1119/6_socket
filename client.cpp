@@ -72,12 +72,17 @@ void myClient::run()
         {
             if (-1 != sockfd)
             {
-                char buffer = GET_TIME;
-                send(sockfd, &buffer, sizeof(buffer), 0);
-                message msg_rcv;
-                msgrcv(msgid, &msg_rcv, BUFFER_SIZE, RES_TIME, 0);        // 第三个参数表示优先接受11
-                time_t time = atol(msg_rcv.content);
-                cout << "Time: " << ctime(&time);
+                for (int i=0; i<100; ++i)
+                {
+                    char buffer = GET_TIME;
+                    send(sockfd, &buffer, sizeof(buffer), 0);
+                    message msg_rcv;
+                    msgrcv(msgid, &msg_rcv, BUFFER_SIZE, RES_TIME, 0);        // 第三个参数表示优先接受11
+                    time_t time = atol(msg_rcv.content);
+                    cout << "Time: " << ctime(&time);
+                    sleep(1);
+                }
+
             }
             else
             {
