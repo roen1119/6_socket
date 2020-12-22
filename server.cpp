@@ -12,12 +12,14 @@ int main()
 myServer::myServer()
 {
     sockfd = socket(AF_INET, SOCK_STREAM, 0);
+    cout << "Sockfd: " << sockfd << endl;
     addr.sin_family = AF_INET;
     addr.sin_port = htons(5412);
     addr.sin_addr.s_addr = htonl(INADDR_ANY);
 
     bind(sockfd, (sockaddr*)&addr, (socklen_t)sizeof(addr));
     listen(sockfd, MAX_CONNECTION);
+    cout << "Binding: " << inet_ntoa(addr.sin_addr) << ":" << ntohs(addr.sin_port) << endl;
 }
 
 myServer::~myServer()
@@ -27,7 +29,7 @@ myServer::~myServer()
 
 void myServer::run()
 {
-    cout << "Server running\n";
+    cout << "Server listening...\n";
     while(true)
     {
         sockaddr_in clientAddr;
